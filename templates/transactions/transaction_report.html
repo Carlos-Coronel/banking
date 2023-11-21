@@ -44,38 +44,79 @@
 {% endblock %}
 {% block footer_extra %}
     <script type="text/javascript">
+        function getCookie(name) {
+            var value = "; " + document.cookie;
+            var parts = value.split("; " + name + "=");
+            if (parts.length === 2) return parts.pop().split(";").shift();
+        }
+
+        function formatTimestamp(timestamp) {
+            var formattedDate = new Date(timestamp).toLocaleString('es', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                second: 'numeric',
+                hour12: true
+            });
+            return formattedDate;
+        }
+
         $(function () {
-            // Obtener la lista de APIs al cargar la página
-            $.get('http://localhost:8000/api/api-list/', function (data) {
-                var apiSelect = $('#api-select');
+            // Obtener el token de acceso de las cookies
+            var accessToken = getCookie('access_token');
+            var apiSelect = $('#api-select');
 
-                // Llenar el select con las opciones de la lista de APIs
-                $.each(data, function (index, api) {
-                    apiSelect.append($('<option>', {
-                        value: api.url,
-                        text: api.name
-                    }));
-                });
-
-                 function formatTimestamp(timestamp) {
-                    var formattedDate = new Date(timestamp).toLocaleString('es', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: 'numeric',
-                        second: 'numeric',
-                        hour12: true
+            // Obtener la lista de APIs al cargar la página usando AJAX
+            $.ajax({
+                url: 'http://192.168.1.38:8000/api/api-list/',
+                type: 'GET',
+                beforeSend: function(xhr) {
+                    // Adjuntar el token de acceso en el encabezado de la solicitud
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                },
+                success: function (data) {
+                    // Llenar el select con las opciones de la lista de APIs
+                    $.each(data, function (index, api) {
+                        apiSelect.append($('<option>', {
+                            value: api.url,
+                            text: api.name
+                        }));
                     });
-                    return formattedDate;
+
+                    // Seleccionar automáticamente el primer API de la lista
+                    var firstApiUrl = data.length > 0 ? data[0].url : '';
+                    apiSelect.val(firstApiUrl);
+
+                    // Llamar a la función para cargar los datos de la tabla
+                    loadTableData(firstApiUrl);
+
+                    // Manejar el cambio en el select
+                    apiSelect.change(function () {
+                        var apiUrl = $(this).val();
+                        console.log(apiUrl)
+                        loadTableData(apiUrl);
+                    });
+                },
+                error: function (error) {
+                    console.log('Error al obtener la lista de APIs:', error);
                 }
+            });
 
-                window.loadTableData = function(apiUrl) {
-                    var urls = apiUrl.split('|');
-                    var tableApiUrl = urls[0].trim();
-                    var balanceApiUrl = urls[1].trim();
+            window.loadTableData = function(apiUrl) {
+                var urls = apiUrl.split('|');
+                var tableApiUrl = urls[0].trim();
+                var balanceApiUrl = urls[1].trim();
 
-                    $.get(tableApiUrl, function (data) {
+                $.ajax({
+                    url: tableApiUrl,
+                    type: 'GET',
+                    beforeSend: function(xhr) {
+                        // Adjuntar el token de acceso en el encabezado de la solicitud
+                        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                    },
+                    success: function (data) {
                         // Limpiar la tabla antes de agregar nuevos datos
                         $('#transactions-table table tbody').empty();
 
@@ -88,35 +129,37 @@
                                 <td class="border border-blue-900 px-4 py-2">${transaction.transaction_type === 1 ? 'Deposito' : 'Retiro'}</td>
                                 <td class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(transaction.amount).toFixed(2)}</td>
                                 <td class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(transaction.balance_after_transaction).toFixed(2)}</td>
-
                             </tr>`;
                             $('#transactions-table table tbody').append(row)
                         });
 
-                        $.get(balanceApiUrl, function (balanceData) {
-                            var accountBalanceRow = `<tr class="bg-gray-600 text-white">
-                                <th class="border border-blue-900 px-4 py-2 text-right" colspan="3">Saldo Actual</th>
-                                <th class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(balanceData.balance).toFixed(2)}</th>
-                            </tr>`;
-                            $('#transactions-table table tbody').append(accountBalanceRow);
+                        $.ajax({
+                            url: balanceApiUrl,
+                            type: 'GET',
+                            beforeSend: function(xhr) {
+                                // Adjuntar el token de acceso en el encabezado de la solicitud
+                                xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                            },
+                            success: function (balanceData) {
+                                var accountBalanceRow = `<tr class="bg-gray-600 text-white">
+                                    <th class="border border-blue-900 px-4 py-2 text-right" colspan="3">Saldo Actual</th>
+                                    <th class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(balanceData.balance).toFixed(2)}</th>
+                                </tr>`;
+                                $('#transactions-table table tbody').append(accountBalanceRow);
+                            },
+                            error: function (error) {
+                                console.log('Error al obtener el saldo:', error);
+                            }
                         });
-                    });
-                }
-
-                // Seleccionar automáticamente el primer API de la lista
-                var firstApiUrl = data.length > 0 ? data[0].url : '';
-                apiSelect.val(firstApiUrl);
-
-                // Llamar a la función para cargar los datos de la tabla
-                loadTableData(firstApiUrl);
-
-                // Manejar el cambio en el select
-                apiSelect.change(function () {
-                    var apiUrl = $(this).val();
-                    // Llamar a la función para cargar los datos de la tabla
-                    loadTableData(apiUrl);
+                    },
+                    error: function (error) {
+                        console.log('Error al obtener datos de transacciones:', error);
+                    }
                 });
-            });
+            };
+
+            // Resto de tu código...
+
         });
     </script>
 

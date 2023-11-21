@@ -16,50 +16,48 @@ from accounts.models import UserBankAccount
 
 from django.shortcuts import redirect
 
+from rest_framework.views import APIView
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_bank_account(request):
-    try:
-        user_bank_account = UserBankAccount.objects.get(user=request.user)
+from rest_framework.permissions import IsAuthenticated
 
-        serializer = UserSerializer(user_bank_account)
+class UserBankAccountView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except UserBankAccount.DoesNotExist:
-        return Response({'error': 'La cuenta bancaria no existe para este usuario.'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        # Manejar cualquier excepción que pueda ocurrir
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def get(self, request):
+        try:
+            user_bank_account = UserBankAccount.objects.get(user=request.user)
+            serializer = UserSerializer(user_bank_account)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except UserBankAccount.DoesNotExist:
+            return Response({'error': 'La cuenta bancaria no existe para este usuario.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class APIListView(APIView):
+    permission_classes = [IsAuthenticated]
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def api_list(request):
-    apis = [
-        {'id': 1, 'name': 'Celestial Bank', 'url': 'http://localhost:8000/api/celestial/report/ | http://localhost:8000/api/user/balance/ '},
-        {'id': 2, 'name': 'Roberk Bank', 'url': 'http://192.168.11.194:8001/api/celestial/report/ | http://localhost:8000/api/user/balance/ '},
-    ]
-    return Response(apis)
+    def get(self, request):
+        apis = [
+            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://192.168.1.38:8000/api/celestial/report/ | http://192.168.1.38:8000/api/user/balance/ '},
+            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://192.168.30.134:8001/api/celestial/report/ | http://192.168.30.134:8000/api/user/balance/ '},
+        ]
+        return Response(apis)
 
+class TransactionListView(APIView):
+    permission_classes = [IsAuthenticated]
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+    def get(self, request, daterange=None):
+        queryset = Transaction.objects.filter(account=request.user.account)
 
-def transaction_list(request, daterange=None):
-    queryset = Transaction.objects.filter(account=request.user.account)
+        # Aplicar el filtrado por rango de fechas si está presente
+        if daterange:
+            start_date, end_date = daterange.split(',')
+            queryset = queryset.filter(timestamp__date__range=[start_date, end_date])
 
-    # Aplicar el filtrado por rango de fechas si está presente
-    if daterange:
-        start_date, end_date = daterange.split(',')
-        queryset = queryset.filter(timestamp__date__range=[start_date, end_date])
-
-    if request.method == 'GET':
         serializer = TransactionSerializer(queryset, many=True)
         return Response(serializer.data)
 
-
-    elif request.method == 'POST':
+    def post(self, request, daterange=None):
         serializer = TransactionSerializer(data=request.data)
         if serializer.is_valid():
             # Configurar el campo 'account' automáticamente antes de guardar
@@ -105,18 +103,19 @@ def transaction_list(request, daterange=None):
             return redirect('transactions:transaction_report')
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-def record_auditoria(request, evento, nivel):
-    mac_int = get_mac()
-    dir_mac = ':'.join(("%012X" % mac_int)[i:i + 2] for i in range(0, 12, 2))
 
-    Auditoria.objects.create(
-        ip=request.META['REMOTE_ADDR'],
-        nombre_pc=request.META.get('COMPUTERNAME', ''),
-        usuario=request.user,
-        evento=evento,
-        nivel=nivel,
-        mac=dir_mac
-    )
+def record_auditoria(request, evento, nivel):
+        mac_int = get_mac()
+        dir_mac = ':'.join(("%012X" % mac_int)[i:i + 2] for i in range(0, 12, 2))
+
+        Auditoria.objects.create(
+            ip=request.META['REMOTE_ADDR'],
+            nombre_pc=request.META.get('COMPUTERNAME', ''),
+            usuario=request.user,
+            evento=evento,
+            nivel=nivel,
+            mac=dir_mac
+        )
 
 
 

@@ -10,6 +10,6 @@ TRANSACTION_TYPE_CHOICES = (
 
 
 APIS = [
-    ('http://localhost:8000/api/celestial/report/', 'Celestial Bank'),
-    ('http://192.168.11.194:8001/api/celestial/report/', 'Robert Bank'),
+    ('http://192.168.1.38:8000/api/celestial/report/', 'Celestial Bank'),
+    ('http://192.168.30.134:8001/api/celestial/report/', 'Robert Bank'),
 ]

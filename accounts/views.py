@@ -4,6 +4,7 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, RedirectView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .forms import UserRegistrationForm, UserAddressForm
 from core.models import Auditoria
@@ -84,6 +85,15 @@ class UserLoginView(LoginView):
                 mac=dir_mac
             )
 
+            # Generar tokens de acceso y actualización
+            refresh = RefreshToken.for_user(self.request.user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+
+            # Agregar tokens al contexto de la respuesta
+            response.set_cookie(key='access_token', value=access_token)
+            response.set_cookie(key='refresh_token', value=refresh_token)
+
         return response
 
 
@@ -101,5 +111,16 @@ class LogoutView(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         if self.request.user.is_authenticated:
+
+            # Obtener el token de actualización de las cookies
+            refresh_token = self.request.COOKIES.get('refresh_token')
+
+            if refresh_token:
+                # Invalidar el token de actualización
+                refresh = RefreshToken(refresh_token)
+                refresh.blacklist()
+
+            # Cerrar la sesión del usuario
             logout(self.request)
+
         return super().get_redirect_url(*args, **kwargs)

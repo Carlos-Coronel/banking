@@ -1,12 +1,12 @@
 # api_app/urls.py
 from django.urls import path
-from .views import transaction_list, api_list, user_bank_account
+from .views import UserBankAccountView, APIListView, TransactionListView
 
 app_name = 'api_app'  # Agrega un espacio de nombres
 
 urlpatterns = [
-    path('celestial/report/', transaction_list, name='transaction-report'),
-    path('api-list/', api_list, name='api-list'),
-    path('user/balance/', user_bank_account, name='user-balance'),
-    path('celestial/report/<str:daterange>/', transaction_list, name='transaction-report-filtered'),
+    path('celestial/report/', TransactionListView.as_view(), name='transaction-report'),
+    path('api-list/', APIListView.as_view(), name='api-list'),
+    path('user/balance/', UserBankAccountView.as_view(), name='user-balance'),
+    path('celestial/report/<str:daterange>/', TransactionListView.as_view(), name='transaction-report-filtered'),
 ]
