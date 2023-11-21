@@ -5,23 +5,27 @@
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> {% endblock %} {% block content %}
 <div class="my-10 py-3 px-4 bg-white rounded-xl shadow-md">
     <h1 class="font-mono font-bold text-3xl text-center pb-5 pt-2">Reporte de Transacción</h1>
+
+     <div class="flex justify-center items-center ">
+        <select class="font-bold text-lg" id="api-select">
+            <!-- Opciones del select se llenarán dinámicamente con JavaScript -->
+        </select>
+    </div>
     <hr />
+
     <form method="get" id="filter">
         <div class="flex justify-center">
             <div class="mt-10 h-10 pl-3 pr-2 bg-white border rounded-md border-gray-500 flex justify-between items-center relative  w-4/12">
-                <input type="search" name="daterange" id="search" placeholder="Filter using date range" class="appearance-none w-full outline-none focus:outline-none active:outline-none" autocomplete="off" value="{{ request.GET.daterange}}" />
-                <button type="submit" class="ml-1 outline-none focus:outline-none active:outline-none">
-                    <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6">
-                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </button>
+                <input type="search" name="daterange" id="search" placeholder="Filtrar por rango de fecha" class="appearance-none w-full outline-none focus:outline-none active:outline-none" autocomplete="off"  />
             </div>
         </div>
         {% if form.daterange.errors %} {% for error in form.daterange.errors %}
         <p class="text-red-600 text-sm italic">{{ error }}</p>
         {% endfor %} {% endif %}
     </form>
-    <table class="table-auto mx-auto w-full mt-8 border-collapse">
+    <div class="my-10 py-3 px-4 bg-white rounded-xl shadow-md" id="transactions-table">
+
+    <table class="table-auto mx-auto w-full mt-1 border-collapse">
         <thead class="bg-gray-800 text-white">
             <tr class="uppercase font-semibold text-sm">
                 <th class=" border border-black px-4 py-2">Fecha</th>
@@ -31,23 +35,93 @@
             </tr>
         </thead>
         <tbody>
-            {% for transaction in object_list %}
-            <tr class="{% cycle 'bg-gray-300' 'bg-white-100' %}">
-                <td class="border border-blue-900 px-4 py-2">{{ transaction.timestamp|date:"F d, Y h:i A" }}</td>
-                <td class="border border-blue-900 px-4 py-2">{{ transaction.get_transaction_type_display }}</td>
-                <td class="border border-blue-900 px-4 py-2 text-right">$ {{ transaction.amount|floatformat:2|intcomma }}</td>
-                <td class="border border-blue-900 px-4 py-2 text-right">$ {{ transaction.balance_after_transaction|floatformat:2|intcomma }}</td>
-            </tr>
-            {% endfor %}
-            <tr class="bg-gray-600 text-white">
-                <th class="border border-blue-900 px-4 py-2 text-right" colspan="3">Saldo Actual</th>
-                <th class="border border-blue-900 px-4 py-2 text-right">$ {{ account.balance|floatformat:2|intcomma }}</th>
-            </tr>
+
         </tbody>
     </table>
+    </div>
+
 </div>
-{% endblock %} {% block footer_extra %}
-<script type="text/javascript">
+{% endblock %}
+{% block footer_extra %}
+    <script type="text/javascript">
+        $(function () {
+            // Obtener la lista de APIs al cargar la página
+            $.get('http://localhost:8000/api/api-list/', function (data) {
+                var apiSelect = $('#api-select');
+
+                // Llenar el select con las opciones de la lista de APIs
+                $.each(data, function (index, api) {
+                    apiSelect.append($('<option>', {
+                        value: api.url,
+                        text: api.name
+                    }));
+                });
+
+                 function formatTimestamp(timestamp) {
+                    var formattedDate = new Date(timestamp).toLocaleString('es', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        second: 'numeric',
+                        hour12: true
+                    });
+                    return formattedDate;
+                }
+
+                window.loadTableData = function(apiUrl) {
+                    var urls = apiUrl.split('|');
+                    var tableApiUrl = urls[0].trim();
+                    var balanceApiUrl = urls[1].trim();
+
+                    $.get(tableApiUrl, function (data) {
+                        // Limpiar la tabla antes de agregar nuevos datos
+                        $('#transactions-table table tbody').empty();
+
+                        // Actualizar la tabla con los nuevos datos
+                        $.each(data, function (index, transaction) {
+                            var formattedDate = formatTimestamp(transaction.timestamp);
+                            var rowClass = index % 2 === 0 ? 'bg-gray-300' : 'bg-white-100';
+                            var row = `<tr class="${rowClass}">
+                                <td class="border border-blue-900 px-4 py-2">${formattedDate}</td>
+                                <td class="border border-blue-900 px-4 py-2">${transaction.transaction_type === 1 ? 'Deposito' : 'Retiro'}</td>
+                                <td class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(transaction.amount).toFixed(2)}</td>
+                                <td class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(transaction.balance_after_transaction).toFixed(2)}</td>
+
+                            </tr>`;
+                            $('#transactions-table table tbody').append(row)
+                        });
+
+                        $.get(balanceApiUrl, function (balanceData) {
+                            var accountBalanceRow = `<tr class="bg-gray-600 text-white">
+                                <th class="border border-blue-900 px-4 py-2 text-right" colspan="3">Saldo Actual</th>
+                                <th class="border border-blue-900 px-4 py-2 text-right">$ ${parseFloat(balanceData.balance).toFixed(2)}</th>
+                            </tr>`;
+                            $('#transactions-table table tbody').append(accountBalanceRow);
+                        });
+                    });
+                }
+
+                // Seleccionar automáticamente el primer API de la lista
+                var firstApiUrl = data.length > 0 ? data[0].url : '';
+                apiSelect.val(firstApiUrl);
+
+                // Llamar a la función para cargar los datos de la tabla
+                loadTableData(firstApiUrl);
+
+                // Manejar el cambio en el select
+                apiSelect.change(function () {
+                    var apiUrl = $(this).val();
+                    // Llamar a la función para cargar los datos de la tabla
+                    loadTableData(apiUrl);
+                });
+            });
+        });
+    </script>
+
+
+    <script type="text/javascript">
     var def_date = '{{request.GET.daterange}}'
     def_date = def_date == "" ? moment().format("Y-MM-DD") + " - " + moment().format("Y-MM-DD") : def_date
     var date_split = def_date.split(" - ")
@@ -64,15 +138,37 @@
             },
         });
 
-        $('input[name="daterange"]').on("apply.daterangepicker", function(ev, picker) {
+       $('input[name="daterange"]').on("apply.daterangepicker", function(ev, picker) {
+            console.log("Fecha seleccionada:", picker.startDate.format("YYYY-MM-DD"), picker.endDate.format("YYYY-MM-DD"));
             $(this).val(picker.startDate.format("YYYY-MM-DD") + " - " + picker.endDate.format("YYYY-MM-DD"));
-            $('#filter').submit()
-        });
+
+            var apiSelect = $('#api-select');
+
+            var selectedApi = apiSelect.val();
+
+            // Obtener la primera URL antes del " | "
+            var firstUrl = selectedApi.split(" | ")[0].trim();
+            var secondUrl = selectedApi.split(" | ")[1].trim();
+
+
+            // Construir la URL concatenando la fecha con la primera URL
+            var apiUrl = firstUrl + picker.startDate.format("YYYY-MM-DD") + ',' + picker.endDate.format("YYYY-MM-DD") +' | ' +secondUrl;
+
+            // Llamar a la función para cargar los datos de la tabla con la nueva URL
+            loadTableData(apiUrl);
+       });
 
         $('input[name="daterange"]').on("cancel.daterangepicker", function(ev, picker) {
+            var apiSelect = $('#api-select');
+
+            var selectedApi = apiSelect.val();
+
             $(this).val("");
-            $('#filter').submit()
+
+            loadTableData(selectedApi);
         });
     });
 </script>
+
+
 {% endblock %}

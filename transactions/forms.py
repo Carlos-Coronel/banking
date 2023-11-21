@@ -4,6 +4,7 @@ from django import forms
 from django.conf import settings
 
 from .models import Transaction
+from transactions.constants import APIS
 
 
 class TransactionForm(forms.ModelForm):
@@ -22,55 +23,14 @@ class TransactionForm(forms.ModelForm):
         self.fields['transaction_type'].disabled = True
         self.fields['transaction_type'].widget = forms.HiddenInput()
 
-    def save(self, commit=True):
-        self.instance.account = self.account
-        self.instance.balance_after_transaction = self.account.balance
-        return super().save()
 
 
 class DepositForm(TransactionForm):
-
-    def clean_amount(self):
-        min_deposit_amount = settings.MINIMUM_DEPOSIT_AMOUNT
-        amount = self.cleaned_data.get('amount')
-
-        if amount < min_deposit_amount:
-            raise forms.ValidationError(
-                f'Necesitas depositar al menos {min_deposit_amount} $'
-            )
-
-        return amount
+    api = forms.ChoiceField(choices=APIS, widget=forms.Select(attrs={'onchange': 'updateAction()'}))
 
 
 class WithdrawForm(TransactionForm):
-
-    def clean_amount(self):
-        account = self.account
-        min_withdraw_amount = settings.MINIMUM_WITHDRAWAL_AMOUNT #CANTIDAD MÍNIMA DE RETIRO
-        max_withdraw_amount = (
-            account.account_type.maximum_withdrawal_amount
-        )
-        balance = account.balance
-
-        amount = self.cleaned_data.get('amount')
-
-        if amount < min_withdraw_amount:
-            raise forms.ValidationError(
-                f'Puedes retirar al menos {min_withdraw_amount} $'
-            )
-
-        if amount > max_withdraw_amount:
-            raise forms.ValidationError(
-                f'Puedes retirar como máximo {max_withdraw_amount} $'
-            )
-
-        if amount > balance:
-            raise forms.ValidationError(
-                f'El saldo de tu cuenta es de {balance} $.'
-                'No puedes retirar más que el saldo de tu cuenta'
-            )
-
-        return amount
+    api = forms.ChoiceField(choices=APIS, widget=forms.Select(attrs={'onchange': 'updateAction()'}))
 
 
 class TransactionDateRangeForm(forms.Form):
