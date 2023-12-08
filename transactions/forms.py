@@ -4,7 +4,6 @@ from django import forms
 from django.conf import settings
 
 from .models import Transaction
-from transactions.constants import APIS
 
 
 class TransactionForm(forms.ModelForm):
@@ -26,12 +25,10 @@ class TransactionForm(forms.ModelForm):
 
 
 class DepositForm(TransactionForm):
-    api = forms.ChoiceField(choices=APIS, widget=forms.Select(attrs={'onchange': 'updateAction()'}))
-
+    pass
 
 class WithdrawForm(TransactionForm):
-    api = forms.ChoiceField(choices=APIS, widget=forms.Select(attrs={'onchange': 'updateAction()'}))
-
+    pass
 
 class TransactionDateRangeForm(forms.Form):
     daterange = forms.CharField(required=False)

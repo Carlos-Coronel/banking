@@ -1,5 +1,3 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -14,7 +12,7 @@ from django.utils import timezone
 
 from accounts.models import UserBankAccount
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 
 from rest_framework.views import APIView
 
@@ -34,12 +32,11 @@ class UserBankAccountView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class APIListView(APIView):
-    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         apis = [
-            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://192.168.1.38:8000/api/celestial/report/ | http://192.168.1.38:8000/api/user/balance/ '},
-            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://192.168.30.134:8001/api/celestial/report/ | http://192.168.30.134:8000/api/user/balance/ '},
+            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://192.168.1.34:8000/api/celestial/report/ | http://192.168.1.34:8000/api/user/balance/ '},
+            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://192.168.30.134:8001/api/celestial/report/ | http://192.168.30.134:8001/api/user/balance/ '},
         ]
         return Response(apis)
 
@@ -58,10 +55,10 @@ class TransactionListView(APIView):
         return Response(serializer.data)
 
     def post(self, request, daterange=None):
+
         serializer = TransactionSerializer(data=request.data)
+
         if serializer.is_valid():
-            # Configurar el campo 'account' automáticamente antes de guardar
-            serializer.validated_data['account'] = request.user.account
             serializer.save()
 
             # Lógica adicional para depósito y retiro
@@ -69,7 +66,10 @@ class TransactionListView(APIView):
 
             if serializer.validated_data.get('transaction_type') == DEPOSIT:
                 # Lógica de depósito
-                account = request.user.account
+                user_id = request.POST.get('user_id')
+                account = get_object_or_404(UserBankAccount, user_id=user_id)
+
+                #account = request.user.account
                 if not account.initial_deposit_date:
                     now = timezone.now()
                     next_interest_month = int(
@@ -88,6 +88,11 @@ class TransactionListView(APIView):
                 )
                 # Auditoría de depósito
                 record_auditoria(request, 'deposito', 'medio')
+                messages.success(
+                    request,
+                    f'{"{:,.2f}".format(float(amount))}$ Fue depositado con éxito'
+                )
+
 
             elif serializer.validated_data.get('transaction_type') == WITHDRAWAL:
                 # Lógica de retiro
@@ -96,11 +101,12 @@ class TransactionListView(APIView):
                 # Auditoría de retiro
                 record_auditoria(request, 'retiro', 'alto')
 
-            messages.success(
-                request,
-                f'{"{:,.2f}".format(float(amount))}$ Fue procesado con éxito'
-            )
-            return redirect('transactions:transaction_report')
+                messages.success(
+                    request,
+                    f'{"{:,.2f}".format(float(amount))}$ Fue retirado con éxito'
+                )
+            return Response({"message": f'{"{:,.2f}".format(float(amount))}$ Fue procesado con éxito'})
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

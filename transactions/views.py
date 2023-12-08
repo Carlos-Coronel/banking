@@ -12,10 +12,6 @@ from transactions.forms import (
 from transactions.models import Transaction
 from .decorators import user_has_bank_account
 
-from core.models import Auditoria
-from uuid import getnode as get_mac
-from django.core.exceptions import ValidationError
-
 #Informe de transacciones
 @method_decorator(user_has_bank_account, name='dispatch')
 
@@ -53,6 +49,7 @@ class DepositMoneyView(TransactionCreateMixin):
     def get_initial(self):
         initial = {'transaction_type': DEPOSIT}
         return initial
+
 
 
 #Retiros de la cuenta bancaria.

@@ -7,9 +7,3 @@ TRANSACTION_TYPE_CHOICES = (
     (WITHDRAWAL, 'Retiro'),
     (INTEREST, 'Interes'),
 )
-
-
-APIS = [
-    ('http://192.168.1.38:8000/api/celestial/report/', 'Celestial Bank'),
-    ('http://192.168.30.134:8001/api/celestial/report/', 'Robert Bank'),
-]

@@ -1,10 +1,27 @@
-<!-- transactions/transaction_form.html -->
 {% extends 'core/base.html' %}
 {% block head_title %}{{ title }}{% endblock %}
 {% block content %}
 
 <div class="w-full flex mt-5 justify-center">
     <div class="bg-white w-5/12">
+
+        <!-- Modal HTML -->
+
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h1 style="font-weight:bold; font-size: 24px;">Ingresa tus datos</h1>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <input type="email" placeholder="Email" />
+        <input type="password" id="password" />
+        <button onclick="obtenerToken()">Confirmar</button>
+    </div>
+</div>
+
+
+
+
         <h1 class="font-mono font-bold text-3xl text-center pb-5 pt-10 px-5">{{ title }}</h1>
         <hr />
         <!-- transactions/transaction_form.html -->
@@ -15,7 +32,7 @@
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="id_api">
                     Selecciona una entidad
                 </label>
-                {{ form.api }}
+                <select id="id_api"></select>
             </div>
 
             <input type="hidden" name="transaction_type" value="{{ form.transaction_type.value }}">
@@ -27,12 +44,14 @@
                 </label>
                 <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight border rounded-md border-gray-500 focus:outline-none focus:shadow-outline" name="amount" id="amount" type="number" required placeholder="Cantidad">
 
+                <input type="hidden" name="user_id" value="{{ request.user.id }}">
+
                 <p id="error-message" class="text-red-600 text-sm italic pb-2"></p>
 
             </div>
 
             <div class="flex w-full justify-center">
-                <button class="bg-blue-900 text-white hover:text-blue-900 hover:bg-white border border-blue-900 font-bold px-4 py-2" type="submit">
+                <button class="bg-blue-900 text-white hover:text-blue-900 hover:bg-white border border-blue-900 font-bold px-4 py-2" type="button" onclick="submitForm()">
                     Submit
                 </button>
             </div>
@@ -40,13 +59,194 @@
     </div>
 </div>
 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
 <script>
+    $(document).ready(function() {
+    $.getJSON('/api/api-list/', function(data) {
+        var select = $('#id_api');
+        $.each(data, function(index, item) {
+            var url = item.url.split(' | ')[0];
+            select.append('<option value="' + url + '">' + item.name + '</option>');
+        });
+        updateAction();
+        });
+
+        $('#id_api').change(function() {
+        updateAction();
+        });
+
+        $('#depositForm').submit(function(e) {
+            e.preventDefault();
+            updateAction();
+            submitForm();
+        });
+
+    });
+
     function updateAction() {
         var select = document.getElementById('id_api');
         var selectedValue = select.options[select.selectedIndex].value;
         document.getElementById('depositForm').action = selectedValue;
     }
-    window.onload = updateAction;
+
+
+    function isTokenExpired(token) {
+        // Decodificar el token
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        // Obtener la fecha de expiración
+        var exp = JSON.parse(jsonPayload).exp;
+
+        // Verificar si el token está vencido
+        var isExpired = Date.now() >= exp * 1000;
+        return isExpired;
+    }
+
+  function showModal() {
+    var modal = document.getElementById('myModal');
+    modal.style.display = 'block';
+  }
+
+  function closeModal() {
+    var modal = document.getElementById('myModal');
+    modal.style.display = 'none';
+  }
+
+  function obtenerToken() {
+    var email = document.querySelector('#myModal input[type="email"]').value;
+    var password = document.querySelector('#myModal input[type="password"]').value;
+    var selectedValue = $('#id_api').val();
+    var splitUrl = selectedValue.split("celestial/");
+    var result = splitUrl[0] + "token/";
+    closeModal();
+    obtenerTokenDesdeDireccion(result, email, password)
+  }
+
+
+  function getUserIdFromToken(token) {
+    try {
+        // Decode the token
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        // Parse the JSON payload
+        var payload = JSON.parse(jsonPayload);
+
+        // Return the user ID from the payload
+        return payload.user_id;
+    } catch (error) {
+        // Handle decoding errors
+        console.error('Error decoding token:', error);
+        return null;
+    }
+  }
+
+  async function submitForm() {
+      var selectedValue = $('#id_api').val();
+      var isFirstOptionSelected = selectedValue === $('#id_api option:first').val();
+      if (!isFirstOptionSelected) {
+          showModal();
+      }
+      else {
+            var form = document.getElementById('depositForm');
+            var formData = new FormData(form);
+
+            // Obtener el token de acceso desde las cookies
+            var accessToken = getCookie('access_token');
+
+            // Verificar si el token está vencido
+            var isExpired = isTokenExpired(accessToken);
+            if (isExpired) {
+                document.getElementById('error-message').innerText = 'Error: El token ha expirado';
+                return;
+            }
+
+
+            // Agregar el token de acceso a los encabezados
+            var headers = new Headers();
+            headers.append('Authorization', 'Bearer ' + accessToken);
+
+            try {
+                // Enviar la solicitud con los encabezados
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: formData,
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData[0]);
+                } else {
+                    window.location.href = '/transactions/report/';
+
+                }
+
+            } catch (error) {
+                document.getElementById('error-message').innerText = 'Error: ' + error.message;
+            }
+        }
+  }
+
+  function getCookie(name) {
+      var value = "; " + document.cookie;
+      var parts = value.split("; " + name + "=");
+      if (parts.length === 2) return parts.pop().split(";").shift();
+  }
+
+
+  async function obtenerTokenDesdeDireccion(direccion, email, password) {
+    var form = document.getElementById("depositForm");
+    var formData = new FormData(form);
+    try {
+        const tokenResponse = await $.ajax({
+            url: direccion,
+            type: 'POST',
+            dataType: 'json',
+            data: { email: email, password: password },
+        });
+        var accessToken =  tokenResponse.access;
+
+        var userId = getUserIdFromToken(accessToken);
+
+        document.querySelector('#depositForm input[name="user_id"]').value = userId;
+
+        var headers = new Headers();
+        headers.append("Authorization", "Bearer " + accessToken);
+
+        try {
+            const response = await fetch(form.action, {
+            method: form.method,
+            body: formData,
+            headers: headers,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData[0]);
+            } else {
+            //window.location.href = "/transactions/report/";
+            }
+        } catch (error) {
+            document.getElementById("error-message").innerText =
+            "Error: " + error.message;
+        }
+    } catch (error) {
+        document.getElementById("error-message").innerText =
+            "Error al obtener el token: " + error;
+    }
+  }
+
+
+
 </script>
 
 {% endblock %}
