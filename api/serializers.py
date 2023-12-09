@@ -1,7 +1,23 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 from transactions.models import Transaction
 from django.conf import settings
 from accounts.models import UserBankAccount
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token["user_id"] = user.id
+        account = UserBankAccount.objects.get(user=user)
+        token['account'] = account.id
+        # ...
+
+        return token
 
 class UserSerializer(serializers.ModelSerializer):
     balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
