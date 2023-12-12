@@ -38,6 +38,9 @@ class TransactionSerializer(serializers.ModelSerializer):
         transaction_type = validated_data['transaction_type']
         amount = validated_data['amount']
 
+        origin = validated_data['origin']
+        required = validated_data['required']
+
         # Asegúrate de que transaction_type es uno de los valores esperados
         valid_transaction_types = [1, 2]
 
@@ -57,6 +60,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             transaction_type=transaction_type,
             account=account,
             balance_after_transaction=new_balance,
+            origin=origin,
+            required=required
         )
 
         return instance

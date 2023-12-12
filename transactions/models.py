@@ -25,6 +25,10 @@ class Transaction(models.Model):
     )
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    origin = models.CharField(max_length=255)
+
+    required = models.CharField(max_length=256)
+
     def __str__(self):
         return str(self.account.account_no)
 

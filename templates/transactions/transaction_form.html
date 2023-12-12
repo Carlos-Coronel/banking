@@ -42,6 +42,8 @@
                 <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight border rounded-md border-gray-500 focus:outline-none focus:shadow-outline" name="amount" id="amount" type="number" required placeholder="Cantidad">
 
                 <input type="hidden" name="user_id" value="{{ request.user.id }}">
+                <input type="hidden" name="origin" id="origin">
+                <input type="hidden" name="required" id="required" value="">
 
                 <p id="error-message" class="text-red-600 text-sm italic pb-2"></p>
 
@@ -179,6 +181,17 @@
             var form = document.getElementById('depositForm');
             var formData = new FormData(form);
 
+            var select = $('#id_api');
+            var selectedOption = select.find('option:selected');
+            var selectedOptionName = selectedOption.text();
+
+            var origin = document.location.origin;
+            var required = selectedOptionName;
+
+            formData.set('origin', origin);
+            formData.set('required', required);
+
+
             // Obtener el token de acceso desde las cookies
             var accessToken = getCookie('access_token');
 
@@ -237,12 +250,22 @@
 
         var userId = getUserIdFromToken(accessToken);
         var account = getAccountFromToken(accessToken);
-        document.querySelector('#depositForm input[name="user_id"]').value = userId;
-        document.querySelector('input[name="account"]').value = account;
-        console.log(account);
+
+        var select = $('#id_api');
+        var selectedOption = select.find('option:selected');
+        var selectedOptionName = selectedOption.text();
+
+        var origin = document.location.origin;
+        var required = selectedOptionName;
+
+        formData.set('origin', origin);
+        formData.set('required', required);
+
+        formData.set('user_id', userId);
+        formData.set('account', account);
+
         var headers = new Headers();
         headers.append("Authorization", "Bearer " + accessToken);
-
         try {
             const response = await fetch(form.action, {
             method: form.method,
@@ -254,7 +277,7 @@
                 const errorData = await response.json();
                 throw new Error(errorData[0]);
             } else {
-            //window.location.href = "/transactions/report/";
+            window.location.href = "/transactions/report/";
             }
         } catch (error) {
             document.getElementById("error-message").innerText =

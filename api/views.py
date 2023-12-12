@@ -35,8 +35,8 @@ class APIListView(APIView):
 
     def get(self, request):
         apis = [
-            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://192.168.1.34:8000/api/celestial/report/ | http://192.168.1.34:8000/api/user/balance/ '},
-            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://192.168.30.134:8001/api/celestial/report/ | http://192.168.30.134:8001/api/user/balance/ '},
+            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://172.26.2.64:8000/api/celestial/report/ | http://172.26.2.64:8000/api/user/balance/ '},
+            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://172.26.2.64:8001/api/celestial/report/ | http://172.26.2.64:8001/api/user/balance/ '},
         ]
         return Response(apis)
 
@@ -113,14 +113,16 @@ class TransactionListView(APIView):
 def record_auditoria(request, evento, nivel):
         mac_int = get_mac()
         dir_mac = ':'.join(("%012X" % mac_int)[i:i + 2] for i in range(0, 12, 2))
-
+        origin = request.META.get('HTTP_ORIGIN', '')
+        computer_name = request.META.get('X-COMPUTER-NAME', '')
         Auditoria.objects.create(
             ip=request.META['REMOTE_ADDR'],
-            nombre_pc=request.META.get('COMPUTERNAME', ''),
+            servidor=request.META.get('COMPUTERNAME', ''),
             usuario=request.user,
             evento=evento,
             nivel=nivel,
-            mac=dir_mac
+            mac=dir_mac,
+            origin=origin,
         )
 
 

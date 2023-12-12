@@ -75,14 +75,16 @@ class UserLoginView(LoginView):
             # Obtener la dirección MAC
             mac_int = get_mac()
             dir_mac = ':'.join(("%012X" % mac_int)[i:i + 2] for i in range(0, 12, 2))
+            origin = self.request.META.get('HTTP_ORIGIN', '')
 
             Auditoria.objects.create(
                 ip=self.request.META['REMOTE_ADDR'],
-                nombre_pc=self.request.META['COMPUTERNAME'],
+                servidor=self.request.META['COMPUTERNAME'],
                 usuario=self.request.user,
                 evento='login',
                 nivel='normal',
-                mac=dir_mac
+                mac=dir_mac,
+                origin=origin,
             )
 
             # Generar tokens de acceso y actualización
