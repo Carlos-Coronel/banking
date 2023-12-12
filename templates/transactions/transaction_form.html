@@ -182,7 +182,7 @@
             var formData = new FormData(form);
 
             var select = $('#id_api');
-            var selectedOption = select.find('option:selected');
+            var selectedOption = select.find('option:first');
             var selectedOptionName = selectedOption.text();
 
             var origin = document.location.origin;
@@ -252,7 +252,7 @@
         var account = getAccountFromToken(accessToken);
 
         var select = $('#id_api');
-        var selectedOption = select.find('option:selected');
+        var selectedOption = select.find('option:first');
         var selectedOptionName = selectedOption.text();
 
         var origin = document.location.origin;
