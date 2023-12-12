@@ -35,8 +35,8 @@ class APIListView(APIView):
 
     def get(self, request):
         apis = [
-            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://172.26.2.64:8000/api/celestial/report/ | http://172.26.2.64:8000/api/user/balance/ '},
-            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://172.26.2.64:8001/api/celestial/report/ | http://172.26.2.64:8001/api/user/balance/ '},
+            {'id': 1, 'name': 'Celestial Bank', 'url': 'http://172.16.5.117:8000/api/celestial/report/ | http://172.16.5.117:8000/api/user/balance/ '},
+            {'id': 2, 'name': 'Roberk Bank', 'url': 'http://172.16.5.93:8001/api/celestial/report/ | http://172.16.5.93:8001/api/user/balance/ '},
         ]
         return Response(apis)
 
