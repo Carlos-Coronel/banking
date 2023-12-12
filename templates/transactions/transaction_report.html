@@ -23,7 +23,7 @@
         <p class="text-red-600 text-sm italic">{{ error }}</p>
         {% endfor %} {% endif %}
     </form>
-    <div class="my-10 py-3 px-4 bg-white rounded-xl shadow-md" id="transactions-table">
+    <div class="my-10 py-3 px-4 bg-white rounded-xl shadow-md overflow-x-auto" id="transactions-table">
 
     <table class="table-auto mx-auto w-full mt-1 border-collapse">
         <thead class="bg-gray-800 text-white">
@@ -31,8 +31,8 @@
                 <th class=" border border-black px-4 py-2">Solicitado</th>
                 <th class=" border border-black px-4 py-2">Fecha</th>
                 <th class=" border border-black px-4 py-2">Tipo de transacción</th>
-                <th class=" border border-black px-4 py-2">Cantidad</th>
-                <th class=" border border-black px-4 py-2">Saldo despues de la transacción</th>
+                <th class=" border border-black px-8 py-2">Cantidad</th>
+                <th class=" border border-black px-8 py-2">Saldo despues de la transacción</th>
             </tr>
         </thead>
         <tbody>

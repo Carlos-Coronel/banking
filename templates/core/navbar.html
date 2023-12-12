@@ -20,8 +20,8 @@
                     Retirar
                 </a>
             </div>
-            <div class="flex w-auto">
-                <div class="text-blue-900 my-auto font-black px-5">Bienvenido, {{ request.user.first_name }} {{ request.user.last_name }}!</div>
+            <div class="flex w-auto ">
+                <div class="text-blue-1200 my-aut font-black px-5">Bienvenido, {{ request.user.first_name }} {{ request.user.last_name }}!</div>
                 <a href="{% url 'accounts:user_logout' %}" class="mx-2 inline-block font-medium text-sm px-4 py-2 leading-none bg-blue-900 rounded text-white border-white hover:border-transparent hover:text-gray-800 hover:bg-white mt-4 lg:mt-0">Cerrar sesión</a>
             </div>
         {% else %}

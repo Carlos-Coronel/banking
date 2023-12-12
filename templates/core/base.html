@@ -120,6 +120,17 @@
 
         {% endblock %}
         {% block footer_extra %}{% endblock %}
+
+
+    <!-- Script para mostrar/ocultar menú en pantallas más pequeñas -->
+    <script>
+        $(document).ready(function () {
+            $('.lg\\:hidden').on('click', function () {
+                $('.lg\\:flex').toggleClass('hidden');
+            });
+        });
+    </script>
+
     </body>
 
 </html>
