@@ -2,7 +2,7 @@
 from django.urls import path
 from .views import UserBankAccountView, APIListView, TransactionListView
 
-app_name = 'api_app'  # Agrega un espacio de nombres
+app_name = 'api_app'
 
 urlpatterns = [
     path('celestial/report/', TransactionListView.as_view(), name='transaction-report'),

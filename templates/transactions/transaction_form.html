@@ -236,60 +236,94 @@
   }
 
 
-  async function obtenerTokenDesdeDireccion(direccion, email, password) {
+async function obtenerTokenDesdeDireccion(direccion, email, password) {
+    var partesUrl = direccion.split("/");
     var form = document.getElementById("depositForm");
     var formData = new FormData(form);
     try {
-        const tokenResponse = await $.ajax({
-            url: direccion,
-            type: 'POST',
-            dataType: 'json',
-            data: { email: email, password: password },
+        // Obtener el tipo de transacción del formulario
+        var transactionType = formData.get('transaction_type');
+
+        var evento = '';
+        var nivel = '';
+
+        if (transactionType === '1') {
+            evento = 'deposito';
+            nivel = 'medio';
+        } else if (transactionType === '2') {
+            evento = 'retiro';
+            nivel = 'alto';
+        } else {
+            throw new Error('Tipo de transacción no reconocido');
+        }
+
+        // Hacer una solicitud a la API para registrar la auditoría
+        const auditoriaResponse = await fetch(`/auditoria/record/${evento}/${nivel}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getCookie('access_token'),  // Puedes ajustar esto según tus necesidades
+            },
+             body: JSON.stringify({
+                ip: partesUrl[2]
+            }),
         });
-        var accessToken =  tokenResponse.access;
 
-        var userId = getUserIdFromToken(accessToken);
-        var account = getAccountFromToken(accessToken);
-
-        var select = $('#id_api');
-        var selectedOption = select.find('option:first');
-        var selectedOptionName = selectedOption.text();
-
-        var origin = document.location.origin;
-        var required = selectedOptionName;
-
-        formData.set('origin', origin);
-        formData.set('required', required);
-
-        formData.set('user_id', userId);
-        formData.set('account', account);
-
-        var headers = new Headers();
-        headers.append("Authorization", "Bearer " + accessToken);
-        try {
-            const response = await fetch(form.action, {
-            method: form.method,
-            body: formData,
-            headers: headers,
+        // Verificar si la solicitud de auditoría fue exitosa antes de continuar
+        if (auditoriaResponse.ok) {
+            // La auditoría se registró correctamente, ahora obtener el token como antes
+            const tokenResponse = await $.ajax({
+                url: direccion,
+                type: 'POST',
+                dataType: 'json',
+                data: { email: email, password: password },
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData[0]);
-            } else {
-            window.location.href = "/transactions/report/";
+            var accessToken = tokenResponse.access;
+            var userId = getUserIdFromToken(accessToken);
+            var account = getAccountFromToken(accessToken);
+
+            var select = $('#id_api');
+            var selectedOption = select.find('option:first');
+            var selectedOptionName = selectedOption.text();
+
+            var origin = document.location.origin;
+            var required = selectedOptionName;
+
+            formData.set('origin', origin);
+            formData.set('required', required);
+
+            formData.set('user_id', userId);
+            formData.set('account', account);
+
+            var headers = new Headers();
+            headers.append("Authorization", "Bearer " + accessToken);
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: formData,
+                    headers: headers,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData[0]);
+                } else {
+                    window.location.href = "/transactions/report/";
+                }
+            } catch (error) {
+                document.getElementById("error-message").innerText =
+                    "Error: " + error.message;
             }
-        } catch (error) {
-            document.getElementById("error-message").innerText =
-            "Error: " + error.message;
+        } else {
+            // La solicitud de auditoría no fue exitosa
+            throw new Error('Error al registrar la auditoría');
         }
     } catch (error) {
         document.getElementById("error-message").innerText =
             "Error al obtener el token: " + error;
     }
-  }
-
-
+}
 
 </script>
 
